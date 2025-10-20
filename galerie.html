@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Galerie — NumeriGirls</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="site-header">
+    <nav class="navbar container">
+      <a class="logo" href="index.html">NumeriGirls</a>
+      <ul class="nav-links">
+        <li><a href="index.html">Accueil</a></li>
+        <li><a href="intervenants.html">Intervenants</a></li>
+        <li><a href="galerie.html">Galerie</a></li>
+        <li><a href="presse.html">Presse</a></li>
+        <li class="dropdown">
+          <a href="#">Éditions ▾</a>
+          <ul class="dropdown-menu">
+            <li><a href="editions/2024.html">2024</a></li>
+            <li><a href="editions/2025.html">2025</a></li>
+            <li><a href="editions/2026.html">2026</a></li>
+          </ul>
+        </li>
+      </ul>
+      <button class="burger" aria-label="menu">☰</button>
+    </nav>
+  </header>
+
+  <main class="container">
+    <section class="card">
+      <h1>Galerie photos & vidéos</h1>
+      <p>Filtrez par édition :</p>
+      <div class="filter-buttons">
+        <button class="filter-btn" data-filter="all">Toutes</button>
+        <button class="filter-btn" data-filter="2024">2024</button>
+        <button class="filter-btn" data-filter="2025">2025</button>
+        <button class="filter-btn" data-filter="2026">2026</button>
+      </div>
+
+      <div class="gallery-grid" id="gallery">
+        <figure data-year="2024"><img src="assets/images/affiche_2024.png" alt="Atelier 2024"><figcaption>Affiche 2024</figcaption></figure>
+		<figure data-year="2024"><img src="assets/images/2024_visiteLab.png" alt="Atelier 2024"><figcaption>Visite du FabLab 2024</figcaption></figure>
+		<figure data-year="2024"><img src="assets/images/VR.jpg" alt="Atelier 2024"><figcaption>Atelier VR 2024</figcaption></figure>
+		<figure data-year="2024"><img src="assets/images/ia.jpg" alt="Atelier 2024"><figcaption>Atelier IA 2024</figcaption></figure>
+        <figure data-year="2025"><img src="assets/images/affiche_2025.png" alt="Conférence 2025"><figcaption>Affiche 2025</figcaption></figure>
+		<figure data-year="2025"><img src="assets/images/2025_ouverture.jpg" alt="Ouverture 2025"><figcaption>Ouverture 2025</figcaption></figure>
+		<figure data-year="2025"><img src="assets/images/2025_Table_Ronde.jpg" alt="Ouverture 2025"><figcaption>Table Ronde 2025</figcaption></figure>
+		<figure data-year="2025"><img src="assets/images/2025_WITHIER.png" alt="Ouverture 2025"><figcaption>Michèle WITHIER 2025</figcaption></figure>
+		<figure data-year="2025"><img src="assets/images/2025_Compagnie_code.jpg" alt="Ouverture 2025"><figcaption>Compagnie du code 2025</figcaption></figure>
+		<figure data-year="2025"><img src="assets/images/2025_MyDigitalSchool.jpg" alt="Ouverture 2025"><figcaption>My Digital School 2025</figcaption></figure>
+		<figure data-year="2025"><img src="assets/images/2025_GirlsCanCode.png" alt="Ouverture 2025"><figcaption>Girls Can Code 2025</figcaption></figure>
+        <figure data-year="2026"><img src="assets/images/affiche_2026.png" alt="Préparation 2026"><figcaption>Affiche 2026</figcaption></figure>
+      </div>
+    </section>
+  </main>
+
+  <div id="lightbox" class="lightbox" aria-hidden="true">
+    <button class="lightbox-close" aria-label="Fermer">✕</button>
+    <img class="lightbox-img" src="" alt="">
+    <p class="lightbox-caption"></p>
+  </div>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>© NumeriGirls — Galerie</p>
+    </div>
+  </footer>
+
+  <script src="js/script.js"></script>
+</body>
+</html>
