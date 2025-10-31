@@ -70,5 +70,29 @@
   </footer>
 
   <script src="js/script.js"></script>
+  <script>
+(function() {
+    const ANALYTICS_URL = 'http://visitme.fr:1234/api/track';
+    const SITE_NAME = 'NumeriGirls_github'; // Change pour chaque site
+    
+    function trackPageView() {
+        fetch(ANALYTICS_URL, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                site: SITE_NAME,
+                page: window.location.pathname,
+                referrer: document.referrer || ''
+            })
+        }).catch(err => console.debug('Analytics:', err));
+    }
+    
+    if (document.readyState === 'complete') {
+        trackPageView();
+    } else {
+        window.addEventListener('load', trackPageView);
+    }
+})();
+</script>
 </body>
 </html>
