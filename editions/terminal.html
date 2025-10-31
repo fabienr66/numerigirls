@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Terminal Linux - Exercices</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            background: #1e1e1e;
+            font-family: 'Courier New', monospace;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        #terminal {
+            flex: 1;
+            background: #000;
+            color: #0f0;
+            padding: 20px;
+            overflow-y: auto;
+            font-size: 14px;
+        }
+        .output {
+            white-space: pre-wrap;
+            margin-bottom: 5px;
+        }
+        .error {
+            color: #f00;
+        }
+        .warning {
+            color: #ff0;
+        }
+        .input-line {
+            display: flex;
+            align-items: center;
+        }
+        .prompt {
+            color: #0f0;
+            margin-right: 8px;
+        }
+        .prompt.root {
+            color: #f00;
+        }
+        #input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: #0f0;
+            font-family: inherit;
+            font-size: inherit;
+            outline: none;
+        }
+        #config {
+            background: #2d2d2d;
+            padding: 10px;
+            border-bottom: 2px solid #0f0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        #config button {
+            background: #0f0;
+            color: #000;
+            border: none;
+            padding: 8px 16px;
+            cursor: pointer;
+            font-family: inherit;
+        }
+        #config button:hover {
+            background: #0c0;
+        }
+        .info {
+            color: #5af;
+        }
+    </style>
+</head>
+<body>
+    <div id="config">
+        <button onclick="resetTerminal()">🔄 Réinitialiser</button>
+    </div>
+    <div id="terminal">
+        <div class="output">Bienvenue dans le Terminal Linux Interactif</div>
+        <div class="output">Tapez 'help' pour voir les commandes disponibles</div>
+        <div class="output"></div>
+    </div>
+
+    <script>
+        // CONFIGURATION DU SYSTÈME DE FICHIERS
+        const INITIAL_CONFIG = `
+# Configuration initiale du terminal
+
+# Structure de dossiers
+* mkdir('/home/labuser/projet')
+* mkdir('/home/labuser/projet/src')
+* mkdir('/home/labuser/documents')
+* mkdir('/home/labuser/backup')
+
+# Créer la structure de dossiers
+* mkdir('/home/labuser/projet')
+* mkdir('/home/labuser/projet/src')
+* mkdir('/home/labuser/documents')
+* mkdir('/home/labuser/downloads')
+* mkdir('/home/labuser/desktop')
+* mkdir('/home/labuser/documents/images')
+* mkdir('/opt/')
+* mkdir('/boot/')
+* mkdir('/bin/')
+* mkdir('/mnt/')
+* mkdir('/usr/')
+* mkdir('/usr/bin/')
+* mkdir('/usr/local/')
+* mkdir('/usr/local/bin/')
+* mkdir('/usr/sbin/')
+* mkdir('/usr/include/')
+* mkdir('/root/')
+* mkdir('/lib/')
+* mkdir('/sbin/')
+* mkdir('/var/')
+* mkdir('/var/tmp/')
+* mkdir('/var/log/')
+* mkdir('/var/cache/')
+* mkdir('/var/spool/')
+* mkdir('/media/')
+* mkdir('/home/root/')
+* mkdir('/home/root/documents/')
+* mkdir('/home/root/downloads/')
+* mkdir('/home/root/desktop/')
+
+# Créer un fichier avec du contenu multiligne
+* createFile('/home/labuser/projet/README.md')
+"# Code dedié au projet H@ck This Lab
+
+Contenu de README.md
+
+## Instructions
+- Recuperer les instructions dans /home/labuser/projet/src
+- Recuperer les credentials github dans /home/labuser/src/credentials.txt"
+
+# Créer un script
+* createFile('/home/labuser/script.sh')
+"#!/bin/bash
+echo 'Bonjour monde'
+date"
+
+# Un autre fichier
+* createFile('/home/labuser/documents/notes.txt')
+"Mes notes importantes:
+CB : 1985
+pass: @lic
+3. Faire les exercices"
+
+
+* createFile/home/labuser/src/credentials.txt')
+"labuser
+Pr0j3ctP@ssG1t"
+`;
+
+        class LinuxTerminal {
+            constructor() {
+                this.fileSystem = {
+                    '/': {
+                        type: 'dir',
+                        content: {
+                            'home': { type: 'dir', content: {} },
+                            'etc': { type: 'dir', content: {} },
+                            'var': { type: 'dir', content: {} },
+                            'tmp': { type: 'dir', content: {} },
+                            'root': { type: 'dir', content: {} }
+                        }
+                    }
+                };
+                this.currentPath = '/home/labuser';
+                this.user = 'labuser';
+                this.hostname = 'linux-labtraining';
+                this.history = [];
+                this.historyIndex = -1;
+                this.processes = [
+                    { pid: 1, name: 'init', user: 'root' },
+                    { pid: 100, name: 'bash', user: this.user }
+                ];
+                this.clipboard = null;
+                this.permissions = {};
+                this.passwordInput = false;
+                this.sudoCommand = '';
+                this.rootPassword = 'toor';
+                
+                this.initFileSystem();
+            }
+
+            initFileSystem() {
+                this.mkdir('/home/labuser');
+                this.mkdir('/root');
+                this.createFile('/home/labuser/.bashrc', '# Configuration bash\nPS1="\\u@\\h:\\w$ "');
+                this.createFile('/etc/passwd', 'root:x:0:0:root:/root:/bin/bash\nlabuser:x:1000:1000::/home/labuser:/bin/bash');
+                this.createFile('/etc/hostname', this.hostname);
+                this.createFile('/etc/shadow', 'root:$6$xyz$abc:18000:0:99999:7:::\nlabuser:$6$xyz$def:18000:0:99999:7:::');
+            }
+
+            loadFromConfig(configText) {
+                const lines = configText.split('\n');
+                let i = 0;
+                let errors = [];
+                let successes = 0;
+                
+                while (i < lines.length) {
+                    const line = lines[i].trim();
+                    
+                    if (!line || line.startsWith('#') || line.startsWith('//')) {
+                        i++;
+                        continue;
+                    }
+                    
+                    if (line.startsWith('* mkdir(')) {
+                        const match = line.match(/\* mkdir\(['"](.+?)['"]\)/);
+                        if (match) {
+                            try {
+                                this.mkdir(match[1]);
+                                successes++;
+                            } catch (e) {
+                                errors.push(`Erreur mkdir: ${match[1]}`);
+                            }
+                        }
+                        i++;
+                    }
+                    else if (line.startsWith('* createFile(')) {
+                        const match = line.match(/\* createFile\(['"](.+?)['"]\)/);
+                        if (match) {
+                            const filePath = match[1];
+                            i++;
+                            
+                            let content = '';
+                            let inContent = false;
+                            
+                            while (i < lines.length) {
+                                const contentLine = lines[i];
+                                
+                                if (contentLine.trim().startsWith('"') && !inContent) {
+                                    inContent = true;
+                                    let text = contentLine.trim().substring(1);
+                                    
+                                    if (text.endsWith('"')) {
+                                        content = text.substring(0, text.length - 1);
+                                        i++;
+                                        break;
+                                    } else {
+                                        content = text + '\n';
+                                        i++;
+                                    }
+                                } else if (inContent) {
+                                    if (contentLine.trim().endsWith('"')) {
+                                        content += contentLine.trim().substring(0, contentLine.trim().length - 1);
+                                        i++;
+                                        break;
+                                    } else {
+                                        content += contentLine + '\n';
+                                        i++;
+                                    }
+                                } else {
+                                    break;
+                                }
+                            }
+                            
+                            try {
+                                this.createFile(filePath, content);
+                                successes++;
+                            } catch (e) {
+                                errors.push(`Erreur createFile: ${filePath}`);
+                            }
+                        } else {
+                            i++;
+                        }
+                    } else {
+                        i++;
+                    }
+                }
+                
+                return { successes, errors };
+            }
+
+            resolvePath(path) {
+                if (path === '') return this.currentPath;
+                if (path[0] !== '/') {
+                    path = this.currentPath + '/' + path;
+                }
+                
+                const parts = path.split('/').filter(p => p && p !== '.');
+                const resolved = [];
+                
+                for (const part of parts) {
+                    if (part === '..') {
+                        resolved.pop();
+                    } else {
+                        resolved.push(part);
+                    }
+                }
+                
+                return '/' + resolved.join('/');
+            }
+
+            getNode(path) {
+                path = this.resolvePath(path);
+                if (path === '/') return this.fileSystem['/'];
+                
+                const parts = path.split('/').filter(p => p);
+                let node = this.fileSystem['/'];
+                
+                for (const part of parts) {
+                    if (!node.content || !node.content[part]) {
+                        return null;
+                    }
+                    node = node.content[part];
+                }
+                
+                return node;
+            }
+
+            createFile(path, content = '', permissions = '644') {
+                const fullPath = this.resolvePath(path);
+                const parts = fullPath.split('/').filter(p => p);
+                const fileName = parts.pop();
+                const dirPath = '/' + parts.join('/');
+                
+                const dir = this.getNode(dirPath);
+                if (!dir || dir.type !== 'dir') return false;
+                
+                dir.content[fileName] = {
+                    type: 'file',
+                    content: content,
+                    permissions: permissions
+                };
+                this.permissions[fullPath] = permissions;
+                return true;
+            }
+
+            mkdir(path) {
+                const fullPath = this.resolvePath(path);
+                const parts = fullPath.split('/').filter(p => p);
+                let node = this.fileSystem['/'];
+                
+                for (const part of parts) {
+                    if (!node.content[part]) {
+                        node.content[part] = { type: 'dir', content: {} };
+                    }
+                    node = node.content[part];
+                }
+                this.permissions[fullPath] = '755';
+                return true;
+            }
+
+            ls(path = '', flags = '') {
+                const node = this.getNode(path || this.currentPath);
+                if (!node) return 'ls: cannot access: No such file or directory';
+                if (node.type !== 'dir') return path;
+                
+                const showHidden = flags.includes('a');
+                const longFormat = flags.includes('l');
+                
+                let items = Object.keys(node.content).filter(name => showHidden || !name.startsWith('.'));
+                
+                if (longFormat) {
+                    let result = '';
+                    for (const name of items) {
+                        const item = node.content[name];
+                        const perms = this.permissions[this.resolvePath((path || this.currentPath) + '/' + name)] || (item.type === 'dir' ? '755' : '644');
+                        const type = item.type === 'dir' ? 'd' : '-';
+                        const permStr = type + this.formatPermissions(perms);
+                        const size = item.type === 'file' ? item.content.length : 4096;
+                        result += `${permStr} 1 ${this.user} ${this.user} ${size.toString().padStart(8)} Oct 31 10:00 ${name}\n`;
+                    }
+                    return result.trim();
+                }
+                
+                return items.join('  ');
+            }
+
+            formatPermissions(perms) {
+                const map = ['---', '--x', '-w-', '-wx', 'r--', 'r-x', 'rw-', 'rwx'];
+                return perms.split('').map(d => map[parseInt(d)]).join('');
+            }
+
+            cd(path) {
+                if (!path) path = '/home/' + this.user;
+                const fullPath = this.resolvePath(path);
+                const node = this.getNode(fullPath);
+                
+                if (!node) return 'cd: no such file or directory: ' + path;
+                if (node.type !== 'dir') return 'cd: not a directory: ' + path;
+                
+                this.currentPath = fullPath;
+                return '';
+            }
+
+            cat(path) {
+                const node = this.getNode(path);
+                if (!node) return 'cat: ' + path + ': No such file or directory';
+                if (node.type !== 'file') return 'cat: ' + path + ': Is a directory';
+                return node.content;
+            }
+
+            pwd() {
+                return this.currentPath;
+            }
+
+            echo(args) {
+                return args.join(' ');
+            }
+
+            mkdir_cmd(path) {
+                if (!path) return 'mkdir: missing operand';
+                this.mkdir(path);
+                return '';
+            }
+
+            rm(path, flags = '') {
+                const fullPath = this.resolvePath(path);
+                const parts = fullPath.split('/').filter(p => p);
+                const fileName = parts.pop();
+                const dirPath = '/' + parts.join('/');
+                
+                const dir = this.getNode(dirPath);
+                const node = this.getNode(fullPath);
+                
+                if (!node) return 'rm: cannot remove "' + path + '": No such file or directory';
+                if (node.type === 'dir' && !flags.includes('r')) {
+                    return 'rm: cannot remove "' + path + '": Is a directory';
+                }
+                
+                delete dir.content[fileName];
+                return '';
+            }
+
+            cp(src, dest) {
+                const srcNode = this.getNode(src);
+                if (!srcNode) return 'cp: cannot stat "' + src + '": No such file or directory';
+                if (srcNode.type === 'dir') return 'cp: -r not specified; omitting directory';
+                
+                this.createFile(dest, srcNode.content);
+                return '';
+            }
+
+            mv(src, dest) {
+                const result = this.cp(src, dest);
+                if (result === '') this.rm(src);
+                return result;
+            }
+
+            chmod(mode, path) {
+                const fullPath = this.resolvePath(path);
+                const node = this.getNode(fullPath);
+                if (!node) return 'chmod: cannot access "' + path + '": No such file or directory';
+                this.permissions[fullPath] = mode;
+                return '';
+            }
+
+            grep(pattern, path) {
+                const node = this.getNode(path);
+                if (!node || node.type !== 'file') return 'grep: ' + path + ': No such file or directory';
+                
+                const lines = node.content.split('\n');
+                return lines.filter(line => line.includes(pattern)).join('\n');
+            }
+
+            find(path = '.', name = '') {
+                const startPath = this.resolvePath(path);
+                const results = [];
+                
+                const search = (currentPath, node) => {
+                    if (node.type === 'dir') {
+                        for (const [itemName, itemNode] of Object.entries(node.content)) {
+                            const itemPath = currentPath === '/' ? '/' + itemName : currentPath + '/' + itemName;
+                            if (!name || itemName.includes(name)) {
+                                results.push(itemPath);
+                            }
+                            if (itemNode.type === 'dir') {
+                                search(itemPath, itemNode);
+                            }
+                        }
+                    }
+                };
+                
+                const node = this.getNode(startPath);
+                if (node) search(startPath, node);
+                return results.join('\n');
+            }
+
+            ps() {
+                let result = 'PID   USER     COMMAND\n';
+                this.processes.forEach(p => {
+                    result += `${p.pid.toString().padEnd(6)}${p.user.padEnd(9)}${p.name}\n`;
+                });
+                return result.trim();
+            }
+
+            whoami() {
+                return this.user;
+            }
+
+            uname(flags = '') {
+                if (flags.includes('a')) {
+                    return 'Linux ' + this.hostname + ' 5.15.0-generic #48-Ubuntu SMP x86_64 GNU/Linux';
+                }
+                return 'Linux';
+            }
+
+            neofetch() {
+                return `
+        _____        ${this.user}@${this.hostname}
+       /  __ \\       OS: Ubuntu 22.04 LTS x86_64
+      |  /  \\ |      Host: @lic3L@B\`
+      | |    ||      Kernel: 5.15.0-generic
+      | |___//       Shell: bash 5.1.16
+      |  ___/        Terminal: web-terminal
+      | |            CPU: Intel i5 (4) @ 2.5GHz
+      |_|            Memory: 512MiB / 4096MiB
+      |_|            `;
+            }
+
+            su() {
+                return 'SU_REQUEST';
+            }
+
+            sudo(args) {
+                if (args.length === 0) {
+                    return 'sudo: no command specified';
+                }
+                return 'SUDO_REQUEST:' + args.join(' ');
+            }
+
+            help() {
+                return `Commandes disponibles:
+ls [-la] [path]     - Liste les fichiers
+cd [path]           - Change de répertoire
+pwd                 - Affiche le répertoire courant
+cat <file>          - Affiche le contenu d'un fichier
+echo <text>         - Affiche du texte
+mkdir <dir>         - Crée un répertoire
+rm [-r] <path>      - Supprime un fichier/répertoire
+cp <src> <dest>     - Copie un fichier
+mv <src> <dest>     - Déplace/renomme un fichier
+chmod <mode> <file> - Change les permissions
+grep <pattern> <f>  - Recherche dans un fichier
+find [path] -name   - Recherche des fichiers
+ps                  - Liste les processus
+whoami              - Affiche l'utilisateur
+uname [-a]          - Infos système
+neofetch            - Infos système stylisées
+su                  - Passe en super utilisateur
+sudo <cmd>          - Exécute une commande en root
+clear               - Efface l'écran
+help                - Affiche cette aide`;
+            }
+
+            executeCommand(cmdLine) {
+                const parts = cmdLine.trim().split(/\s+/);
+                const cmd = parts[0];
+                const args = parts.slice(1);
+
+                switch(cmd) {
+                    case '': return '';
+                    case 'help': return this.help();
+                    case 'clear': return 'CLEAR';
+                    case 'ls': return this.ls(args[0], args.join(''));
+                    case 'cd': return this.cd(args[0]);
+                    case 'pwd': return this.pwd();
+                    case 'cat': return args[0] ? this.cat(args[0]) : 'cat: missing operand';
+                    case 'echo': return this.echo(args);
+                    case 'mkdir': return this.mkdir_cmd(args[0]);
+                    case 'rm': return this.rm(args[args.length - 1], args.join(''));
+                    case 'cp': return args.length === 2 ? this.cp(args[0], args[1]) : 'cp: missing operand';
+                    case 'mv': return args.length === 2 ? this.mv(args[0], args[1]) : 'mv: missing operand';
+                    case 'chmod': return args.length === 2 ? this.chmod(args[0], args[1]) : 'chmod: missing operand';
+                    case 'grep': return args.length === 2 ? this.grep(args[0], args[1]) : 'grep: missing operand';
+                    case 'find': {
+                        const nameIdx = args.indexOf('-name');
+                        return this.find(args[0] || '.', nameIdx > -1 ? args[nameIdx + 1] : '');
+                    }
+                    case 'ps': return this.ps();
+                    case 'whoami': return this.whoami();
+                    case 'uname': return this.uname(args.join(''));
+                    case 'neofetch': return this.neofetch();
+                    case 'su': return this.su();
+                    case 'sudo': return this.sudo(args);
+                    case 'touch':
+                        if (!args[0]) return 'touch: missing operand';
+                        this.createFile(args[0], '');
+                        return '';
+                    case 'head':
+                        if (!args[0]) return 'head: missing operand';
+                        const headNode = this.getNode(args[0]);
+                        if (!headNode || headNode.type !== 'file') return 'head: cannot open';
+                        return headNode.content.split('\n').slice(0, 10).join('\n');
+                    case 'tail':
+                        if (!args[0]) return 'tail: missing operand';
+                        const tailNode = this.getNode(args[0]);
+                        if (!tailNode || tailNode.type !== 'file') return 'tail: cannot open';
+                        return tailNode.content.split('\n').slice(-10).join('\n');
+                    case 'exit':
+                        if (this.user === 'root') {
+                            this.user = 'labuser';
+                            this.currentPath = '/home/labuser';
+                            return 'Retour à l\'utilisateur labuser';
+                        }
+                        return '';
+                    default:
+                        return cmd + ': command not found';
+                }
+            }
+        }
+
+        const terminal = new LinuxTerminal();
+        const terminalDiv = document.getElementById('terminal');
+        const input = document.createElement('input');
+        input.id = 'input';
+
+        function addOutput(text, className = 'output') {
+            const div = document.createElement('div');
+            div.className = className;
+            div.textContent = text;
+            terminalDiv.appendChild(div);
+            terminalDiv.scrollTop = terminalDiv.scrollHeight;
+        }
+
+        function createInputLine() {
+            const line = document.createElement('div');
+            line.className = 'input-line';
+            
+            const prompt = document.createElement('span');
+            prompt.className = terminal.user === 'root' ? 'prompt root' : 'prompt';
+            const promptChar = terminal.user === 'root' ? '#' : '$';
+            prompt.textContent = `${terminal.user}@${terminal.hostname}:${terminal.currentPath}${promptChar} `;
+            
+            const newInput = input.cloneNode();
+            if (terminal.passwordInput) {
+                newInput.type = 'password';
+            }
+            newInput.addEventListener('keydown', handleKeyDown);
+            
+            line.appendChild(prompt);
+            line.appendChild(newInput);
+            terminalDiv.appendChild(line);
+            
+            newInput.focus();
+            terminalDiv.scrollTop = terminalDiv.scrollHeight;
+        }
+
+        function handleKeyDown(e) {
+            if (e.key === 'Enter') {
+                const cmd = e.target.value;
+                e.target.disabled = true;
+                
+                // Gestion du mot de passe
+                if (terminal.passwordInput) {
+                    terminal.passwordInput = false;
+                    
+                    if (cmd === terminal.rootPassword) {
+                        if (terminal.sudoCommand) {
+                            // Exécuter la commande sudo
+                            const output = terminal.executeCommand(terminal.sudoCommand);
+                            if (output && output !== 'CLEAR') {
+                                addOutput(output, output.includes('not found') || output.includes('cannot') ? 'error' : 'output');
+                            }
+                            terminal.sudoCommand = '';
+                        } else {
+                            // Commande su
+                            terminal.user = 'root';
+                            terminal.currentPath = '/root';
+                            addOutput('root@' + terminal.hostname + ':' + terminal.currentPath + '#');
+                        }
+                    } else {
+                        addOutput('su: Authentication failure', 'error');
+                    }
+                    
+                    createInputLine();
+                    return;
+                }
+                
+                terminal.history.push(cmd);
+                terminal.historyIndex = terminal.history.length;
+                
+                const output = terminal.executeCommand(cmd);
+                
+                if (output === 'CLEAR') {
+                    terminalDiv.innerHTML = '';
+                } else if (output === 'SU_REQUEST') {
+                    addOutput('Password: ', 'warning');
+                    terminal.passwordInput = true;
+                } else if (output.startsWith('SUDO_REQUEST:')) {
+                    const sudoCmd = output.substring(13);
+                    terminal.sudoCommand = sudoCmd;
+                    addOutput('[sudo] password for ' + terminal.user + ': ', 'warning');
+                    terminal.passwordInput = true;
+                } else if (output) {
+                    addOutput(output, output.includes('not found') || output.includes('cannot') ? 'error' : 'output');
+                }
+                
+                createInputLine();
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                if (terminal.historyIndex > 0) {
+                    terminal.historyIndex--;
+                    e.target.value = terminal.history[terminal.historyIndex];
+                }
+            } else if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                if (terminal.historyIndex < terminal.history.length - 1) {
+                    terminal.historyIndex++;
+                    e.target.value = terminal.history[terminal.historyIndex];
+                } else {
+                    terminal.historyIndex = terminal.history.length;
+                    e.target.value = '';
+                }
+            }
+        }
+
+        function resetTerminal() {
+            terminal.fileSystem = {
+                '/': {
+                    type: 'dir',
+                    content: {
+                        'home': { type: 'dir', content: {} },
+                        'etc': { type: 'dir', content: {} },
+                        'var': { type: 'dir', content: {} },
+                        'tmp': { type: 'dir', content: {} },
+                        'root': { type: 'dir', content: {} }
+                    }
+                }
+            };
+            terminal.user = 'labuser';
+            terminal.currentPath = '/home/labuser';
+            terminal.permissions = {};
+            terminal.history = [];
+            terminal.historyIndex = -1;
+            terminal.passwordInput = false;
+            terminal.sudoCommand = '';
+            terminal.initFileSystem();
+            
+            // Charger la configuration initiale
+            terminal.loadFromConfig(INITIAL_CONFIG);
+            
+            terminalDiv.innerHTML = '<div class="output">Terminal réinitialisé</div><div class="output">Configuration chargée avec succès</div>';
+            createInputLine();
+        }
+
+        // Initialisation au chargement de la page
+        window.addEventListener('load', () => {
+            terminal.loadFromConfig(INITIAL_CONFIG);
+            addOutput('Configuration chargée avec succès', 'info');
+            createInputLine();
+        });
+    </script>
+</body>
+</html>
