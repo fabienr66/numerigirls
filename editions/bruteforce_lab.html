@@ -1,0 +1,1045 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CTF — Password Cracker Lab</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg0: #080b10;
+  --bg1: #0d1117;
+  --bg2: #161b22;
+  --bg3: #21262d;
+  --border: #30363d;
+  --text0: #e6edf3;
+  --text1: #c9d1d9;
+  --text2: #8b949e;
+  --text3: #6e7681;
+  --blue: #58a6ff;
+  --blue-dim: #1f6feb;
+  --green: #3fb950;
+  --green-bg: #0f291e;
+  --yellow: #d29922;
+  --yellow-bg: #291a0a;
+  --red: #f85149;
+  --red-bg: #1c0a0a;
+  --orange: #f0883e;
+  --purple: #bc8cff;
+  --cyan: #39c5cf;
+}
+
+html, body {
+  background: var(--bg0);
+  color: var(--text1);
+  font-family: 'Courier New', Courier, monospace;
+  min-height: 100vh;
+  font-size: 14px;
+}
+
+/* ─── LAYOUT ─── */
+.app { max-width: 860px; margin: 0 auto; padding: 24px 20px 60px; }
+
+.header { text-align: center; margin-bottom: 28px; }
+.header-ascii {
+  color: var(--blue);
+  font-size: 11px;
+  line-height: 1.3;
+  letter-spacing: 1px;
+  white-space: pre;
+  margin-bottom: 8px;
+}
+.header-sub { font-size: 12px; color: var(--text3); letter-spacing: 2px; }
+
+/* ─── TABS ─── */
+.tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 24px;
+  gap: 0;
+}
+.tab {
+  padding: 10px 22px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text2);
+  border-bottom: 2px solid transparent;
+  transition: all .15s;
+  letter-spacing: .5px;
+  user-select: none;
+}
+.tab:hover:not(.active) { color: var(--text0); border-bottom-color: var(--border); }
+.tab.active { color: var(--blue); border-bottom-color: var(--blue); }
+.section { display: none; }
+.section.active { display: block; }
+
+/* ─── CARDS ─── */
+.card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px 18px;
+  margin-bottom: 14px;
+}
+.card-title {
+  font-size: 12px;
+  color: var(--text3);
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  margin-bottom: 14px;
+}
+
+/* ─── TAB 1 : ENTRAINEMENT ─── */
+
+/* Fake login page */
+.login-wrapper {
+  background: var(--bg1);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 32px 28px 24px;
+  max-width: 400px;
+  margin: 0 auto 20px;
+  position: relative;
+}
+.login-logo {
+  text-align: center;
+  margin-bottom: 20px;
+}
+.login-logo-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px; height: 44px;
+  background: var(--bg3);
+  border-radius: 10px;
+  font-size: 22px;
+  margin-bottom: 8px;
+}
+.login-logo-text { font-size: 16px; color: var(--text0); font-weight: bold; }
+.login-logo-sub { font-size: 11px; color: var(--text3); margin-top: 2px; }
+.login-field { margin-bottom: 14px; }
+.login-label { font-size: 11px; color: var(--text2); margin-bottom: 6px; display: block; letter-spacing: .5px; }
+.login-input {
+  width: 100%;
+  background: var(--bg0);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px 12px;
+  color: var(--text0);
+  font-family: 'Courier New', monospace;
+  font-size: 14px;
+  outline: none;
+  transition: border-color .2s;
+}
+.login-input:focus { border-color: var(--blue); }
+.login-btn {
+  width: 100%;
+  padding: 11px;
+  background: var(--blue-dim);
+  border: none;
+  border-radius: 6px;
+  color: #fff;
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background .2s;
+  letter-spacing: .5px;
+  margin-top: 4px;
+}
+.login-btn:hover { background: var(--blue); color: #000; }
+.login-separator { border: none; border-top: 1px solid var(--border); margin: 18px 0 12px; }
+
+/* Strength meter */
+.strength-meter { margin-bottom: 10px; }
+.strength-bar-bg {
+  height: 5px;
+  background: var(--bg3);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 6px;
+}
+.strength-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width .3s, background .3s;
+  width: 0%;
+}
+
+/* Time display big */
+.time-display {
+  background: var(--bg0);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 10px;
+}
+.time-icon { font-size: 24px; flex-shrink: 0; }
+.time-main { flex: 1; }
+.time-value { font-size: 22px; font-weight: bold; color: var(--blue); line-height: 1.2; }
+.time-unit { font-size: 12px; color: var(--text2); }
+.time-context { font-size: 12px; color: var(--text2); margin-top: 4px; line-height: 1.5; }
+.time-context strong { color: var(--text0); }
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.detail-box {
+  background: var(--bg0);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px;
+  text-align: center;
+}
+.detail-label { font-size: 10px; color: var(--text3); margin-bottom: 4px; letter-spacing: .5px; }
+.detail-value { font-size: 15px; font-weight: bold; color: var(--blue); }
+
+/* charset pills */
+.charset-info {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.charset-pill {
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  border: 1px solid;
+  transition: all .2s;
+}
+.cp-on  { background: #1f6feb22; border-color: var(--blue); color: var(--blue); }
+.cp-off { background: transparent; border-color: var(--border); color: var(--text3); }
+
+.tip-line {
+  font-size: 12px;
+  color: var(--text3);
+  line-height: 1.6;
+  padding: 10px 12px;
+  background: var(--bg0);
+  border-left: 3px solid var(--border);
+  border-radius: 0 4px 4px 0;
+}
+.tip-line.good { border-color: var(--green); color: var(--text2); }
+.tip-line.bad  { border-color: var(--red); color: var(--text2); }
+.tip-line.warn { border-color: var(--yellow); color: var(--text2); }
+
+/* ─── TAB 2 : CTF ─── */
+
+.ctf-briefing {
+  background: var(--bg2);
+  border: 1px solid var(--yellow);
+  border-radius: 8px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+  font-size: 13px;
+  line-height: 1.8;
+}
+.ctf-briefing .mission-label {
+  color: var(--orange);
+  font-weight: bold;
+  font-size: 12px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+/* Terminal */
+.terminal-wrap {
+  background: #000;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 14px;
+  font-family: 'Courier New', monospace;
+}
+.terminal-titlebar {
+  background: var(--bg3);
+  padding: 8px 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid var(--border);
+}
+.t-dot { width: 11px; height: 11px; border-radius: 50%; }
+.t-dot-r { background: #ff5f57; }
+.t-dot-y { background: #ffbd2e; }
+.t-dot-g { background: #28c840; }
+.t-title { font-size: 11px; color: var(--text3); margin-left: 6px; }
+.terminal-body {
+  padding: 14px 16px;
+  min-height: 320px;
+  max-height: 460px;
+  overflow-y: auto;
+  font-size: 12.5px;
+  line-height: 1.7;
+}
+.terminal-body::-webkit-scrollbar { width: 6px; }
+.terminal-body::-webkit-scrollbar-track { background: #000; }
+.terminal-body::-webkit-scrollbar-thumb { background: var(--bg3); border-radius: 3px; }
+
+.tl { display: block; white-space: pre-wrap; word-break: break-all; }
+.tl-cmd    { color: var(--green); }
+.tl-out    { color: var(--text2); }
+.tl-err    { color: var(--red); }
+.tl-warn   { color: var(--yellow); }
+.tl-info   { color: var(--cyan); }
+.tl-flag   { color: var(--green); font-weight: bold; }
+.tl-found  { color: var(--orange); font-weight: bold; }
+.tl-dim    { color: var(--text3); }
+.tl-cursor::after {
+  content: '█';
+  animation: blink .8s step-end infinite;
+  color: var(--green);
+  font-size: 13px;
+}
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+.terminal-input-line {
+  display: flex;
+  align-items: center;
+  padding: 8px 16px 12px;
+  border-top: 1px solid var(--bg3);
+  background: #000;
+  gap: 8px;
+}
+.t-prompt { color: var(--green); font-size: 12.5px; flex-shrink: 0; white-space: nowrap; }
+.t-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text0);
+  font-family: 'Courier New', monospace;
+  font-size: 12.5px;
+  caret-color: var(--green);
+}
+
+.ctf-targets {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.target-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  cursor: pointer;
+  transition: all .2s;
+  text-align: center;
+}
+.target-card:hover { border-color: var(--blue); }
+.target-card.locked { opacity: .5; cursor: not-allowed; }
+.target-card.cracked { border-color: var(--green); }
+.target-card.active-target { border-color: var(--orange); box-shadow: 0 0 0 1px var(--orange); }
+.tc-name { font-size: 13px; color: var(--text0); font-weight: bold; margin-bottom: 4px; }
+.tc-hint { font-size: 11px; color: var(--text3); margin-bottom: 6px; line-height: 1.4; }
+.tc-badge {
+  display: inline-block;
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  letter-spacing: .5px;
+  text-transform: uppercase;
+}
+.tc-easy   { background: var(--green-bg); color: var(--green); border: 1px solid var(--green); }
+.tc-medium { background: var(--yellow-bg); color: var(--yellow); border: 1px solid var(--yellow); }
+.tc-hard   { background: var(--red-bg); color: var(--red); border: 1px solid var(--red); }
+
+.flag-box {
+  background: var(--green-bg);
+  border: 1px solid var(--green);
+  border-radius: 8px;
+  padding: 14px 16px;
+  display: none;
+  margin-top: 10px;
+}
+.flag-box.visible { display: block; }
+.flag-title { font-size: 12px; color: var(--green); letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 6px; }
+.flag-value { font-size: 16px; font-weight: bold; color: var(--green); letter-spacing: 1px; margin-bottom: 8px; }
+.flag-explain { font-size: 12px; color: var(--text2); line-height: 1.7; }
+
+/* ─── TAB 3 : THÉORIE ─── */
+.formula-box {
+  background: var(--bg0);
+  border-left: 3px solid var(--blue);
+  padding: 12px 16px;
+  border-radius: 0 6px 6px 0;
+  font-size: 14px;
+  color: #a5d6ff;
+  margin: 10px 0;
+  letter-spacing: .5px;
+}
+.table-wrap { overflow-x: auto; }
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+thead th {
+  background: var(--bg3);
+  color: var(--text2);
+  padding: 8px 10px;
+  text-align: left;
+  font-weight: normal;
+  letter-spacing: .5px;
+}
+tbody td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--bg3);
+  color: var(--text1);
+}
+tbody tr:hover td { background: var(--bg2); }
+.c-good   { color: var(--green); }
+.c-warn   { color: var(--yellow); }
+.c-bad    { color: var(--red); }
+.c-purple { color: var(--purple); }
+
+.bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; font-size: 12px; }
+.bar-lbl { width: 170px; color: var(--text2); text-align: right; flex-shrink: 0; }
+.bar-bg  { flex: 1; background: var(--bg3); border-radius: 3px; height: 15px; overflow: hidden; }
+.bar-fill { height: 100%; border-radius: 3px; }
+.bar-val { width: 110px; font-size: 11px; }
+
+.rules-list { list-style: none; }
+.rules-list li {
+  padding: 7px 0;
+  border-bottom: 1px solid var(--bg3);
+  font-size: 13px;
+  color: var(--text1);
+  line-height: 1.5;
+}
+.rules-list li:last-child { border: none; }
+
+/* ─── MISC ─── */
+.badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  letter-spacing: .5px;
+  text-transform: uppercase;
+}
+.badge-green  { background: var(--green-bg);  color: var(--green);  border: 1px solid var(--green); }
+.badge-yellow { background: var(--yellow-bg); color: var(--yellow); border: 1px solid var(--yellow); }
+.badge-red    { background: var(--red-bg);    color: var(--red);    border: 1px solid var(--red); }
+.badge-blue   { background: #1f2e4a;          color: var(--blue);   border: 1px solid var(--blue); }
+
+.row { display: flex; gap: 10px; }
+.row > * { flex: 1; }
+
+.result-line {
+  background: var(--red-bg);
+  border: 1px solid var(--red);
+  border-radius: 8px;
+  padding: 14px 16px;
+  margin-top: 10px;
+  display: none;
+}
+.flag-box {
+  background: var(--green-bg);
+  border: 1px solid var(--green);
+  border-radius: 8px;
+  padding: 14px 16px;
+  display: none;
+  margin-top: 10px;
+}
+.flag-box.visible { display: block; }
+.flag-title { font-size: 12px; color: var(--green); letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 6px; }
+.flag-value { font-size: 15px; font-weight: bold; color: var(--green); letter-spacing: 1px; margin-bottom: 8px; }
+.flag-explain { font-size: 12px; color: var(--text2); line-height: 1.7; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="header">
+    <div class="header-ascii">██████╗ ██████╗ ██╗   ██╗████████╗███████╗    ███████╗ ██████╗ ██████╗  ██████╗███████╗
+██╔══██╗██╔══██╗██║   ██║╚══██╔══╝██╔════╝    ██╔════╝██╔═══██╗██╔══██╗██╔════╝██╔════╝
+██████╔╝██████╔╝██║   ██║   ██║   █████╗      █████╗  ██║   ██║██████╔╝██║     █████╗  
+██╔══██╗██╔══██╗██║   ██║   ██║   ██╔══╝      ██╔══╝  ██║   ██║██╔══██╗██║     ██╔══╝  
+██████╔╝██║  ██║╚██████╔╝   ██║   ███████╗    ██║     ╚██████╔╝██║  ██║╚██████╗███████╗
+╚═════╝ ╚═╝  ╚═════╝    ╚═╝   ╚══════╝    ╚═╝      ╚═════╝ ╚═╝  ╚═╝ ╚═════╝╚══════╝</div>
+    <div class="header-sub">PASSWORD CRACKER LAB · CYBERSECURITY TRAINING</div>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active" onclick="showTab('train',this)">01 / Entraînement</div>
+    <div class="tab" onclick="showTab('eval',this)">02 / Évaluer la sécurité</div>
+    <div class="tab" onclick="showTab('ctf',this)">03 / Challenge CTF</div>
+    <div class="tab" onclick="showTab('theory',this)">04 / Théorie</div>
+  </div>
+
+  <!-- ═══ TAB 1 — ENTRAÎNEMENT ═══ -->
+  <div class="section active" id="tab-train">
+    <div class="card">
+      <div class="card-title">// Simulation — page de connexion cible</div>
+      <div class="login-wrapper">
+        <div class="login-logo">
+          <div class="login-logo-icon">🏦</div>
+          <div class="login-logo-text">SecureBank™</div>
+          <div class="login-logo-sub">Espace client sécurisé</div>
+        </div>
+        <div class="login-field">
+          <label class="login-label">IDENTIFIANT</label>
+          <input class="login-input" type="text" value="jean.dupont@mail.fr" readonly>
+        </div>
+        <div class="login-field">
+          <label class="login-label">MOT DE PASSE — essayez le vôtre !</label>
+          <input class="login-input" type="text" id="pwd-input" placeholder="entrez un mot de passe..." oninput="analyzePwd(this.value)" autocomplete="off" spellcheck="false">
+        </div>
+        <div class="strength-meter">
+          <div class="strength-bar-bg"><div class="strength-bar-fill" id="strength-bar"></div></div>
+        </div>
+        <div id="charset-info" class="charset-info">
+          <span class="charset-pill cp-off" id="cp-lower">a–z (26)</span>
+          <span class="charset-pill cp-off" id="cp-upper">A–Z (+26)</span>
+          <span class="charset-pill cp-off" id="cp-digits">0–9 (+10)</span>
+          <span class="charset-pill cp-off" id="cp-special">!@#$ (+32)</span>
+        </div>
+        <hr class="login-separator">
+        <div class="time-display" id="time-display" style="display:none">
+          <div class="time-icon" id="time-icon">⏱</div>
+          <div class="time-main">
+            <div class="time-value" id="time-value">—</div>
+            <div class="time-unit" id="time-unit"></div>
+            <div class="time-context" id="time-context"></div>
+          </div>
+        </div>
+        <div class="tip-line" id="tip-line" style="display:none"></div>
+        <button class="login-btn" style="margin-top:14px" onclick="alert('Ceci est une simulation — pas de vraie connexion !')">→ Se connecter</button>
+      </div>
+      <div class="detail-grid" id="detail-grid" style="display:none">
+        <div class="detail-box"><div class="detail-label">Longueur</div><div class="detail-value" id="d-len">—</div></div>
+        <div class="detail-box"><div class="detail-label">Alphabet</div><div class="detail-value" id="d-alpha">—</div></div>
+        <div class="detail-box"><div class="detail-label">Combinaisons</div><div class="detail-value" id="d-combi">—</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">// Comparatif rapide</div>
+      <table>
+        <thead><tr><th>Mot de passe</th><th>Alphabet</th><th>Longueur</th><th>Temps de crack</th><th>Niveau</th></tr></thead>
+        <tbody>
+          <tr><td><code>azerty</code></td><td>26</td><td>6</td><td class="c-bad">3 sec</td><td><span class="badge badge-red">Critique</span></td></tr>
+          <tr><td><code>Azerty1</code></td><td>62</td><td>7</td><td class="c-warn">~6 min</td><td><span class="badge badge-yellow">Faible</span></td></tr>
+          <tr><td><code>Azerty1!</code></td><td>94</td><td>8</td><td class="c-warn">~14 heures</td><td><span class="badge badge-yellow">Moyen</span></td></tr>
+          <tr><td><code>kX9!mP2@qL</code></td><td>94</td><td>10</td><td class="c-good">~127 ans</td><td><span class="badge badge-green">Fort</span></td></tr>
+          <tr><td><code>chat-bleu-table-lune</code></td><td>27</td><td>20</td><td class="c-purple">∞ pratique</td><td><span class="badge badge-blue">Très fort</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ═══ TAB 2 — ÉVALUER LA SÉCURITÉ ═══ -->
+  <div class="section" id="tab-eval">
+    <div class="ctf-briefing">
+      <div class="mission-label">🔬 Évaluation brute force</div>
+      Trois comptes ont été interceptés sur le réseau d'une entreprise. Sélectionnez une cible et lancez l'attaque. Observez comment le temps de crack évolue selon la complexité du mot de passe.
+    </div>
+    <div class="ctf-targets">
+      <div class="target-card" id="tc-alice" onclick="selectTarget('alice')">
+        <div class="tc-name">alice@corp.fr</div>
+        <div class="tc-hint">Minuscules seulement · 4 chars</div>
+        <span class="tc-badge tc-easy">Facile</span>
+      </div>
+      <div class="target-card" id="tc-bob" onclick="selectTarget('bob')">
+        <div class="tc-name">b.martin@corp.fr</div>
+        <div class="tc-hint">Majuscules + chiffres · 6 chars</div>
+        <span class="tc-badge tc-medium">Moyen</span>
+      </div>
+      <div class="target-card" id="tc-carol" onclick="selectTarget('carol')">
+        <div class="tc-name">c.dubois@corp.fr</div>
+        <div class="tc-hint">Tout + spéciaux · 10 chars</div>
+        <span class="tc-badge tc-hard">Difficile</span>
+      </div>
+    </div>
+    <div class="terminal-wrap">
+      <div class="terminal-titlebar">
+        <span class="t-dot t-dot-r"></span><span class="t-dot t-dot-y"></span><span class="t-dot t-dot-g"></span>
+        <span class="t-title">root@kali:~ — brutox v2.4</span>
+      </div>
+      <div class="terminal-body" id="eval-term-body">
+        <span class="tl tl-dim">BruToX v2.4 — Password Brute Force Tool</span>
+        <span class="tl tl-dim">──────────────────────────────────────────────────────</span>
+        <span class="tl tl-out">Sélectionnez une cible ci-dessus pour lancer l'attaque.</span>
+        <span class="tl tl-dim"> </span>
+        <span class="tl tl-dim">root@kali:~# <span class="tl-cursor"></span></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ TAB 3 — CHALLENGE CTF ═══ -->
+  <div class="section" id="tab-ctf">
+    <div class="ctf-briefing">
+      <div class="mission-label">🏴 Objectif du challenge</div>
+      Le système de chiffrement solaire ne peut être percé que par un mot de passe <strong style="color:var(--text0)">dont le crack par brute force prendrait plus longtemps que la durée de vie restante du Soleil</strong> (~5 milliards d'années).<br><br>
+      Proposez un mot de passe. BruToX simulera l'attaque. Si votre mot de passe résiste, vous obtenez le flag.
+    </div>
+
+    <div class="card">
+      <div class="card-title">// Entrez votre mot de passe candidat</div>
+      <div class="login-field">
+        <label class="login-label">MOT DE PASSE CANDIDAT</label>
+        <input class="login-input" type="text" id="ctf-pwd-input" placeholder="proposez un mot de passe solide..." autocomplete="off" spellcheck="false" oninput="ctfAnalyze(this.value)">
+      </div>
+      <div id="ctf-charset-info" class="charset-info" style="margin-top:8px">
+        <span class="charset-pill cp-off" id="ctf-cp-lower">a–z (26)</span>
+        <span class="charset-pill cp-off" id="ctf-cp-upper">A–Z (+26)</span>
+        <span class="charset-pill cp-off" id="ctf-cp-digits">0–9 (+10)</span>
+        <span class="charset-pill cp-off" id="ctf-cp-special">!@#$ (+32)</span>
+      </div>
+      <div id="ctf-preview" style="display:none;margin-top:12px">
+        <div class="detail-grid">
+          <div class="detail-box"><div class="detail-label">Longueur</div><div class="detail-value" id="ctf-d-len">—</div></div>
+          <div class="detail-box"><div class="detail-label">Alphabet</div><div class="detail-value" id="ctf-d-alpha">—</div></div>
+          <div class="detail-box"><div class="detail-label">Combinaisons</div><div class="detail-value" id="ctf-d-combi">—</div></div>
+        </div>
+        <div class="time-display" style="margin-top:10px">
+          <div class="time-icon" id="ctf-time-icon">⏱</div>
+          <div class="time-main">
+            <div class="time-value" id="ctf-time-value" style="color:var(--blue)">—</div>
+            <div class="time-unit" id="ctf-time-unit"></div>
+            <div class="time-context" id="ctf-time-context"></div>
+          </div>
+        </div>
+      </div>
+      <button class="login-btn" id="ctf-launch-btn" style="margin-top:16px;display:none" onclick="ctfLaunchAttack()">⚡ Lancer la simulation BruToX</button>
+    </div>
+
+    <div class="terminal-wrap" id="ctf-terminal" style="display:none">
+      <div class="terminal-titlebar">
+        <span class="t-dot t-dot-r"></span><span class="t-dot t-dot-y"></span><span class="t-dot t-dot-g"></span>
+        <span class="t-title">root@kali:~ — brutox v2.4 · mode challenge</span>
+      </div>
+      <div class="terminal-body" id="ctf-term-body"></div>
+    </div>
+
+    <div class="flag-box" id="ctf-flag-box">
+      <div class="flag-title">🏴 FLAG OBTENU — Le Soleil mourra avant que ce mot de passe soit cracké</div>
+      <div class="flag-value">FLAG{5un_w1ll_d13_b3f0r3_1_g3t_cr4ck3d}</div>
+      <div class="flag-explain" id="ctf-flag-explain"></div>
+    </div>
+
+    <div class="result-line" id="ctf-fail-box">
+      <div style="color:var(--red);font-weight:bold;margin-bottom:6px">✗ Mot de passe insuffisant</div>
+      <div id="ctf-fail-explain" style="font-size:12px;color:var(--text2);line-height:1.7"></div>
+    </div>
+  </div>
+
+  <!-- ═══ TAB 4 — THÉORIE ═══ -->
+  <div class="section" id="tab-theory">
+    <div class="card">
+      <div class="card-title">// La formule fondamentale</div>
+      <div style="font-size:13px;color:var(--text2);line-height:1.8">Le nombre maximal de tentatives pour casser un mot de passe en brute force :</div>
+      <div class="formula-box">N_tentatives = taille_alphabet <sup>longueur</sup></div>
+      <div style="font-size:13px;color:var(--text2);line-height:1.8;margin-top:8px">
+        Passer de minuscules (26) à minuscules+majuscules (52) avec 6 caractères :<br>
+        &nbsp;&nbsp;26<sup>6</sup> = 308 millions &nbsp;→&nbsp; 52<sup>6</sup> = 19 milliards &nbsp;(×62 plus de combinaisons)<br>
+        Ajouter les chiffres (62) :<br>
+        &nbsp;&nbsp;62<sup>6</sup> = 56 milliards &nbsp;(×3 supplémentaire)<br>
+        Chaque caractère ajouté <strong style="color:var(--text0)">multiplie</strong> l'espace de recherche par la taille de l'alphabet.
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">// Impact de la longueur — alphabet = 26 (minuscules)</div>
+      <div class="bar-row"><div class="bar-lbl">4 chars (26⁴)</div><div class="bar-bg"><div class="bar-fill" style="width:2%;background:var(--red)"></div></div><div class="bar-val c-bad">~0.0001 sec</div></div>
+      <div class="bar-row"><div class="bar-lbl">6 chars (26⁶)</div><div class="bar-bg"><div class="bar-fill" style="width:5%;background:var(--red)"></div></div><div class="bar-val c-bad">~3 sec</div></div>
+      <div class="bar-row"><div class="bar-lbl">8 chars (26⁸)</div><div class="bar-bg"><div class="bar-fill" style="width:12%;background:var(--yellow)"></div></div><div class="bar-val c-warn">~2 min</div></div>
+      <div class="bar-row"><div class="bar-lbl">10 chars (26¹⁰)</div><div class="bar-bg"><div class="bar-fill" style="width:24%;background:var(--yellow)"></div></div><div class="bar-val c-warn">~24 heures</div></div>
+      <div class="bar-row"><div class="bar-lbl">12 chars (26¹²)</div><div class="bar-bg"><div class="bar-fill" style="width:50%;background:var(--green)"></div></div><div class="bar-val c-good">~40 ans</div></div>
+      <div class="bar-row"><div class="bar-lbl">14 chars (26¹⁴)</div><div class="bar-bg"><div class="bar-fill" style="width:85%;background:var(--blue)"></div></div><div class="bar-val c-purple">~27 000 ans</div></div>
+    </div>
+    <div class="card">
+      <div class="card-title">// Impact du jeu de caractères — longueur fixe = 8</div>
+      <table>
+        <thead><tr><th>Jeu de caractères</th><th>Taille</th><th>Combinaisons (8 chars)</th><th>Temps (~100M essais/s)</th></tr></thead>
+        <tbody>
+          <tr><td>Minuscules</td><td>26</td><td>208 milliards</td><td class="c-bad">~35 min</td></tr>
+          <tr><td>+ Majuscules</td><td>52</td><td>53 500 milliards</td><td class="c-warn">~6 jours</td></tr>
+          <tr><td>+ Chiffres</td><td>62</td><td>218 000 milliards</td><td class="c-warn">~25 jours</td></tr>
+          <tr><td>+ Spéciaux</td><td>94</td><td>6 095 000 milliards</td><td class="c-good">~700 jours</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="card">
+      <div class="card-title">// Mise en perspective — durées et échelles cosmiques</div>
+      <table>
+        <thead><tr><th>Référence temporelle</th><th>Durée</th></tr></thead>
+        <tbody>
+          <tr><td>Vie humaine moyenne (à 20 ans)</td><td>~60 ans restants</td></tr>
+          <tr><td>Durée de vie restante du Soleil</td><td style="color:var(--orange)">~5 milliards d'années ☀️</td></tr>
+          <tr><td>Âge de l'Univers</td><td>~13,8 milliards d'années</td></tr>
+          <tr><td style="color:var(--blue)">94¹² (12 chars, tous types)</td><td class="c-purple">~3 000 milliards d'années</td></tr>
+          <tr><td style="color:var(--blue)">94¹⁶ (16 chars, tous types)</td><td class="c-purple">~10²⁴ années — indéchiffrable</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="card">
+      <div class="card-title">// Règles d'or</div>
+      <ul class="rules-list">
+        <li>🔐 <strong style="color:var(--green)">Minimum 12 caractères</strong> — la longueur est votre meilleure protection</li>
+        <li>🔡 <strong style="color:var(--green)">Mélanger les types</strong> — majuscules, chiffres et symboles multiplient les combinaisons</li>
+        <li>🎲 <strong style="color:var(--green)">Aléatoire</strong> — les mots du dictionnaire sont cassés en quelques minutes</li>
+        <li>🔑 <strong style="color:var(--green)">Un mot de passe unique par service</strong> — utiliser un gestionnaire (Bitwarden, KeePass…)</li>
+        <li>💡 <strong style="color:var(--blue)">La passphrase</strong> — 4 mots aléatoires "chat-bleu-table-lune" = très forte et mémorisable</li>
+        <li>🚫 <strong style="color:var(--red)">Jamais</strong> : prénom, date de naissance, "123456", "password", séquences clavier</li>
+      </ul>
+    </div>
+  </div>
+
+</div>
+
+<script>
+var SUN_LIFE_YEARS = 5e9;
+var HUMAN_LIFE_YEARS = 60;
+
+// ─── TABS ───────────────────────────────────────────────────────
+function showTab(id, el) {
+  document.querySelectorAll('.section').forEach(function(s){ s.classList.remove('active'); });
+  document.querySelectorAll('.tab').forEach(function(t){ t.classList.remove('active'); });
+  document.getElementById('tab-'+id).classList.add('active');
+  el.classList.add('active');
+}
+
+// ─── SHARED HELPERS ─────────────────────────────────────────────
+function getAlpha(pwd) {
+  var a = 0;
+  if (/[a-z]/.test(pwd)) a += 26;
+  if (/[A-Z]/.test(pwd)) a += 26;
+  if (/[0-9]/.test(pwd)) a += 10;
+  if (/[^a-zA-Z0-9]/.test(pwd)) a += 32;
+  return a || 1;
+}
+
+function fmtBig(n) {
+  if (n < 1e3)  return n.toFixed(0);
+  if (n < 1e6)  return (n/1e3).toFixed(1) + 'K';
+  if (n < 1e9)  return (n/1e6).toFixed(1) + 'M';
+  if (n < 1e12) return (n/1e9).toFixed(1) + 'Md';
+  if (n < 1e15) return (n/1e12).toFixed(1) + 'Bn';
+  if (n < 1e18) return (n/1e15).toFixed(1) + 'Qn';
+  return n.toExponential(1);
+}
+
+function fmtTime(sec) {
+  if (sec < 0.001)     return { v: '<1', u: 'milliseconde' };
+  if (sec < 1)         return { v: (sec*1000).toFixed(0), u: 'millisecondes' };
+  if (sec < 60)        return { v: sec.toFixed(1), u: 'secondes' };
+  if (sec < 3600)      return { v: (sec/60).toFixed(1), u: 'minutes' };
+  if (sec < 86400)     return { v: (sec/3600).toFixed(1), u: 'heures' };
+  if (sec < 31536000)  return { v: (sec/86400).toFixed(1), u: 'jours' };
+  var y = sec / 31536000;
+  if (y < HUMAN_LIFE_YEARS)  return { v: y.toFixed(1), u: 'années' };
+  if (y < 1000)              return { v: y.toFixed(0), u: 'années' };
+  if (y < 1e6)               return { v: (y/1000).toFixed(0), u: 'millénaires' };
+  if (y < 1e9)               return { v: (y/1e6).toFixed(1), u: 'millions d\'années' };
+  if (y < 1e12)              return { v: (y/1e9).toFixed(2), u: 'milliards d\'années' };
+  return { v: '>10¹²', u: 'années' };
+}
+
+function getContext(sec) {
+  var y = sec / 31536000;
+  if (sec < 60)              return { icon:'💀', text:'Cracké <strong>instantanément</strong>.', color:'#f85149' };
+  if (sec < 3600)            return { icon:'🚨', text:'Cracké en quelques <strong>minutes</strong>.', color:'#f85149' };
+  if (sec < 86400)           return { icon:'⚠️', text:'Cracké en quelques <strong>heures</strong>.', color:'#d29922' };
+  if (sec < 86400*30)        return { icon:'🟡', text:'Cracké en quelques <strong>jours</strong>.', color:'#d29922' };
+  if (y < HUMAN_LIFE_YEARS)  return { icon:'🕐', text:'Cracké pendant <strong>votre vie</strong>.', color:'#d29922' };
+  if (y < SUN_LIFE_YEARS)    return { icon:'☀️', text:'Survivrait à votre vie, mais <strong>pas au Soleil</strong> (5 Md ans).', color:'#d29922' };
+  if (y < 1e12)              return { icon:'🌌', text:'Survit au Soleil. <strong>Indéchiffrable</strong> en pratique.', color:'#3fb950' };
+  return { icon:'♾️', text:'Dépasse l\'âge de l\'Univers. <strong>Indéchiffrable</strong>.', color:'#bc8cff' };
+}
+
+function getStrength(sec) {
+  var y = sec/31536000;
+  if (sec < 60)             return { pct:8,  color:'#f85149' };
+  if (sec < 3600)           return { pct:20, color:'#f85149' };
+  if (sec < 86400)          return { pct:35, color:'#d29922' };
+  if (sec < 86400*30)       return { pct:50, color:'#d29922' };
+  if (y < HUMAN_LIFE_YEARS) return { pct:62, color:'#d29922' };
+  if (y < SUN_LIFE_YEARS)   return { pct:74, color:'#d29922' };
+  if (y < 1e12)             return { pct:88, color:'#3fb950' };
+  return { pct:97, color:'#bc8cff' };
+}
+
+function updateCharsetPills(pwd, prefix) {
+  var p = prefix || '';
+  var tests = [['lower',/[a-z]/],['upper',/[A-Z]/],['digits',/[0-9]/],['special',/[^a-zA-Z0-9]/]];
+  tests.forEach(function(pair){
+    var el = document.getElementById((p?p+'-':'cp-')+pair[0]);
+    if (el) el.className = 'charset-pill ' + (pair[1].test(pwd) ? 'cp-on' : 'cp-off');
+  });
+}
+
+// ─── TAB 1 : ENTRAÎNEMENT ───────────────────────────────────────
+function analyzePwd(pwd) {
+  updateCharsetPills(pwd, '');
+  if (!pwd) {
+    document.getElementById('time-display').style.display = 'none';
+    document.getElementById('tip-line').style.display = 'none';
+    document.getElementById('detail-grid').style.display = 'none';
+    document.getElementById('strength-bar').style.width = '0%';
+    return;
+  }
+  var alpha = getAlpha(pwd);
+  var combi = Math.pow(alpha, pwd.length);
+  var sec = combi / 1e8 / 2;
+  var t = fmtTime(sec);
+  var ctx = getContext(sec);
+  var str = getStrength(sec);
+  document.getElementById('strength-bar').style.width = str.pct + '%';
+  document.getElementById('strength-bar').style.background = str.color;
+  document.getElementById('time-display').style.display = 'flex';
+  document.getElementById('time-icon').textContent = ctx.icon;
+  document.getElementById('time-value').textContent = t.v;
+  document.getElementById('time-value').style.color = ctx.color;
+  document.getElementById('time-unit').textContent = t.u;
+  document.getElementById('time-context').innerHTML = ctx.text;
+  document.getElementById('detail-grid').style.display = 'grid';
+  document.getElementById('d-len').textContent = pwd.length;
+  document.getElementById('d-alpha').textContent = alpha;
+  document.getElementById('d-combi').textContent = fmtBig(combi);
+  var tip = document.getElementById('tip-line');
+  tip.style.display = 'block';
+  var y = sec/31536000;
+  if (sec < 3600) {
+    tip.className = 'tip-line bad';
+    tip.innerHTML = '💡 Ajoutez des majuscules, des chiffres ou des caractères spéciaux et augmentez la longueur.';
+  } else if (y < SUN_LIFE_YEARS) {
+    tip.className = 'tip-line warn';
+    tip.innerHTML = '💡 Encore quelques caractères supplémentaires et ce mot de passe survivrait au Soleil (5 Md ans).';
+  } else {
+    tip.className = 'tip-line good';
+    tip.innerHTML = '✅ Ce mot de passe résisterait au brute force plus longtemps que la durée de vie du Soleil.';
+  }
+}
+
+// ─── TAB 2 : ÉVALUER LA SÉCURITÉ ────────────────────────────────
+var TARGETS = {
+  alice: { user:'alice@corp.fr', password:'kiwi', charset:'lower', length:4, alpha:26,
+    explain:'Mot de passe : "kiwi" — 4 lettres minuscules. 26⁴ = 456 976 combinaisons. Cracké en 0.005 seconde.' },
+  bob:   { user:'b.martin@corp.fr', password:'Rt7mK2', charset:'upper+digits', length:6, alpha:36,
+    explain:'Mot de passe : "Rt7mK2" — maj+chiffres, 6 chars. 36⁶ ≈ 2,1 milliards. Cracké en ~21 secondes.' },
+  carol: { user:'c.dubois@corp.fr', password:null, charset:'all+special', length:10, alpha:94,
+    explain:'10 chars, alphabet 94. 94¹⁰ ≈ 5,4×10¹⁹ combinaisons. Temps estimé : ~17 000 ans. Brute force impraticable.' }
+};
+
+var evalCrackTimer = null;
+var evalCrackInterval = null;
+
+function selectTarget(key) {
+  if (evalCrackTimer) return;
+  document.querySelectorAll('.target-card').forEach(function(c){ c.classList.remove('active-target'); });
+  document.getElementById('tc-'+key).classList.add('active-target');
+  var t = TARGETS[key];
+  var body = document.getElementById('eval-term-body');
+  body.innerHTML = '';
+
+  function addLine(cls, text, delay) {
+    setTimeout(function(){
+      var span = document.createElement('span');
+      span.className = 'tl ' + cls;
+      span.innerHTML = text;
+      body.appendChild(span);
+      body.scrollTop = body.scrollHeight;
+    }, delay);
+  }
+
+  var combi = Math.pow(t.alpha, t.length);
+  var realSec = combi / 1e8;
+  var simDur = t.password ? Math.min(realSec * 1000, 4000) : 4500;
+
+  addLine('tl-cmd',  'root@kali:~# brutox --target '+t.user+' --charset '+t.charset+' --length '+t.length, 0);
+  addLine('tl-dim',  '──────────────────────────────────────────────────────────────', 150);
+  addLine('tl-info', '[*] Cible     : '+t.user, 300);
+  addLine('tl-info', '[*] Alphabet  : '+t.charset+' ('+t.alpha+' chars)', 450);
+  addLine('tl-info', '[*] Longueur  : '+t.length+' caractères', 600);
+  addLine('tl-info', '[*] Espace    : '+t.alpha+'^'+t.length+' = '+fmtBig(combi)+' combinaisons', 750);
+  addLine('tl-warn', '[*] Vitesse   : ~100 000 000 essais/seconde', 900);
+  addLine('tl-dim',  '──────────────────────────────────────────────────────────────', 1050);
+  addLine('tl-out',  '[*] Démarrage de l\'attaque...', 1200);
+
+  var tryCount = 0;
+  var s = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
+  function rndPwd(len) { var r=''; for(var i=0;i<len;i++) r+=s[Math.floor(Math.random()*s.length)]; return r; }
+
+  evalCrackInterval = setInterval(function(){
+    tryCount += Math.floor(Math.random()*5e6 + 3e6);
+    var pct = Math.min(tryCount/combi*100, t.password ? 99.9 : 100).toFixed(1);
+    var span = document.createElement('span');
+    span.className = 'tl tl-out';
+    span.innerHTML = '  \u2192 '+rndPwd(t.length)+'&nbsp;&nbsp;<span style="color:var(--text3)">['+pct+'% \u2014 '+fmtBig(tryCount)+' essais]</span>';
+    body.appendChild(span);
+    if (body.children.length > 80) body.removeChild(body.children[4]);
+    body.scrollTop = body.scrollHeight;
+  }, 280);
+
+  evalCrackTimer = setTimeout(function(){
+    clearInterval(evalCrackInterval);
+    evalCrackTimer = null;
+    evalCrackInterval = null;
+    addLine('tl-dim', '──────────────────────────────────────────────────────────────', 0);
+    if (t.password) {
+      addLine('tl-found', '[+] MOT DE PASSE TROUVÉ : <strong>'+t.password+'</strong>', 200);
+      var tr = fmtTime(realSec);
+      addLine('tl-out', '[+] Temps réel estimé : '+tr.v+' '+tr.u, 400);
+      addLine('tl-out', '[+] '+t.explain, 600);
+      setTimeout(function(){ document.getElementById('tc-'+key).classList.add('cracked'); }, 800);
+    } else {
+      var y = realSec/31536000;
+      var duree = y > 1e9 ? (y/1e9).toFixed(0)+' milliards d\'années' : (y/1e6).toFixed(0)+' millions d\'années';
+      addLine('tl-err',  '[-] ATTAQUE ÉCHOUÉE — espace de recherche trop grand', 200);
+      addLine('tl-warn', '[-] Temps pour finir : ~'+duree, 400);
+      addLine('tl-warn', '[-] Référence : Soleil ~5 milliards d\'années de vie restante', 600);
+      addLine('tl-err',  '[-] Brute force impraticable sur ce mot de passe.', 800);
+      addLine('tl-out',  '[i] '+t.explain, 1000);
+    }
+  }, 1400 + simDur);
+}
+
+// ─── TAB 3 : CHALLENGE CTF ──────────────────────────────────────
+var ctfCrackTimer = null;
+var ctfCrackInterval = null;
+var ctfPwd = '';
+
+function ctfAnalyze(pwd) {
+  ctfPwd = pwd;
+  updateCharsetPills(pwd, 'ctf-cp');
+  var preview = document.getElementById('ctf-preview');
+  var btn = document.getElementById('ctf-launch-btn');
+  if (!pwd) {
+    preview.style.display = 'none';
+    btn.style.display = 'none';
+    return;
+  }
+  preview.style.display = 'block';
+  btn.style.display = 'block';
+  var alpha = getAlpha(pwd);
+  var combi = Math.pow(alpha, pwd.length);
+  var sec = combi / 1e8 / 2;
+  var t = fmtTime(sec);
+  var ctx = getContext(sec);
+  document.getElementById('ctf-d-len').textContent = pwd.length;
+  document.getElementById('ctf-d-alpha').textContent = alpha;
+  document.getElementById('ctf-d-combi').textContent = fmtBig(combi);
+  document.getElementById('ctf-time-icon').textContent = ctx.icon;
+  document.getElementById('ctf-time-value').textContent = t.v;
+  document.getElementById('ctf-time-value').style.color = ctx.color;
+  document.getElementById('ctf-time-unit').textContent = t.u;
+  document.getElementById('ctf-time-context').innerHTML = ctx.text;
+  // Reset results
+  document.getElementById('ctf-flag-box').classList.remove('visible');
+  document.getElementById('ctf-fail-box').style.display = 'none';
+  document.getElementById('ctf-terminal').style.display = 'none';
+}
+
+function updateCharsetPills(pwd, prefix) {
+  var tests = [['lower',/[a-z]/],['upper',/[A-Z]/],['digits',/[0-9]/],['special',/[^a-zA-Z0-9]/]];
+  tests.forEach(function(pair){
+    var id = prefix ? prefix+'-'+pair[0] : 'cp-'+pair[0];
+    var el = document.getElementById(id);
+    if (el) el.className = 'charset-pill ' + (pair[1].test(pwd) ? 'cp-on' : 'cp-off');
+  });
+}
+
+function ctfLaunchAttack() {
+  if (ctfCrackTimer) return;
+  if (!ctfPwd) return;
+  var pwd = ctfPwd;
+  var alpha = getAlpha(pwd);
+  var combi = Math.pow(alpha, pwd.length);
+  var realSec = combi / 1e8;
+  var realYears = realSec / 31536000;
+  var wins = realYears > SUN_LIFE_YEARS;
+
+  document.getElementById('ctf-terminal').style.display = 'block';
+  document.getElementById('ctf-flag-box').classList.remove('visible');
+  document.getElementById('ctf-fail-box').style.display = 'none';
+  document.getElementById('ctf-launch-btn').disabled = true;
+
+  var body = document.getElementById('ctf-term-body');
+  body.innerHTML = '';
+
+  function addLine(cls, text, delay) {
+    setTimeout(function(){
+      var span = document.createElement('span');
+      span.className = 'tl ' + cls;
+      span.innerHTML = text;
+      body.appendChild(span);
+      body.scrollTop = body.scrollHeight;
+    }, delay);
+  }
+
+  var s = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
+  function rndPwd(len) { var r=''; for(var i=0;i<len;i++) r+=s[Math.floor(Math.random()*s.length)]; return r; }
+
+  addLine('tl-cmd',  'root@kali:~# brutox --target "challenge" --charset auto --length '+pwd.length, 0);
+  addLine('tl-dim',  '──────────────────────────────────────────────────────────────', 150);
+  addLine('tl-info', '[*] Longueur  : '+pwd.length+' caractères', 300);
+  addLine('tl-info', '[*] Alphabet  : '+alpha+' caractères détectés', 450);
+  addLine('tl-info', '[*] Espace    : '+alpha+'^'+pwd.length+' = '+fmtBig(combi)+' combinaisons', 600);
+  addLine('tl-warn', '[*] Vitesse   : ~100 000 000 essais/seconde', 750);
+  addLine('tl-dim',  '──────────────────────────────────────────────────────────────', 900);
+  addLine('tl-out',  '[*] Attaque en cours...', 1050);
+
+  var tryCount = 0;
+  var simDur = wins ? 5000 : Math.min(realSec * 1000, 4000);
+
+  ctfCrackInterval = setInterval(function(){
+    tryCount += Math.floor(Math.random()*5e6 + 3e6);
+    var pct = wins ? Math.min(tryCount/combi*100, 0.000001).toFixed(8)
+                   : Math.min(tryCount/combi*100, 99.9).toFixed(1);
+    var span = document.createElement('span');
+    span.className = 'tl tl-out';
+    span.innerHTML = '  \u2192 '+rndPwd(pwd.length)+'&nbsp;&nbsp;<span style="color:var(--text3)">['+pct+'% \u2014 '+fmtBig(tryCount)+' essais]</span>';
+    body.appendChild(span);
+    if (body.children.length > 80) body.removeChild(body.children[4]);
+    body.scrollTop = body.scrollHeight;
+  }, 280);
+
+  ctfCrackTimer = setTimeout(function(){
+    clearInterval(ctfCrackInterval);
+    ctfCrackTimer = null;
+    ctfCrackInterval = null;
+    document.getElementById('ctf-launch-btn').disabled = false;
+    addLine('tl-dim', '──────────────────────────────────────────────────────────────', 0);
+    if (wins) {
+      var t = fmtTime(realSec);
+      addLine('tl-err', '[-] ATTAQUE ABANDONNÉE — durée estimée supérieure à la vie du Soleil', 200);
+      addLine('tl-warn','[-] Temps estimé : '+t.v+' '+t.u, 400);
+      addLine('tl-warn','[-] Référence : Soleil ~5 000 000 000 années restantes', 600);
+      addLine('tl-flag','[✓] Mot de passe jugé inviolable par brute force. FLAG débloqué.', 900);
+      setTimeout(function(){
+        var t2 = fmtTime(realSec);
+        document.getElementById('ctf-flag-explain').textContent =
+          'Votre mot de passe "'+pwd+'" ('+pwd.length+' chars, alphabet '+alpha+') nécessiterait '+t2.v+' '+t2.u+' à craquer. Le Soleil mourra dans ~5 milliards d\'années. Brute force impossible.';
+        document.getElementById('ctf-flag-box').classList.add('visible');
+      }, 1200);
+    } else {
+      var tf = fmtTime(realSec);
+      if (!wins && realSec < 1e8 * 2) {
+        addLine('tl-found','[+] MOT DE PASSE CRACKÉ : <strong>'+pwd+'</strong>', 200);
+        addLine('tl-out',  '[+] Durée réelle : '+tf.v+' '+tf.u, 400);
+      } else {
+        addLine('tl-warn', '[-] Attaque non terminée — temps estimé : '+tf.v+' '+tf.u, 200);
+        addLine('tl-err',  '[-] Insuffisant : '+tf.v+' '+tf.u+' < 5 milliards d\'années', 400);
+      }
+      setTimeout(function(){
+        var tf2 = fmtTime(realSec);
+        document.getElementById('ctf-fail-explain').innerHTML =
+          'Temps de crack estimé : <strong style="color:var(--red)">'+tf2.v+' '+tf2.u+'</strong><br>Seuil requis : <strong style="color:var(--orange)">5 milliards d\'années (durée de vie restante du Soleil)</strong><br><br>Conseil : augmentez la longueur et diversifiez les types de caractères.';
+        document.getElementById('ctf-fail-box').style.display = 'block';
+      }, 700);
+    }
+  }, 1400 + simDur);
+}
+</script>
+</body>
+</html>
